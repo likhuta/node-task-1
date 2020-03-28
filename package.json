@@ -1,0 +1,11 @@
+{
+  "name": "task-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "annalikhuta",
+  "license": "ISC"
+}
