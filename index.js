@@ -1,41 +1,62 @@
 const { program } = require("commander");
-const process = require('process');
-const fs = require('fs');
-const validator = require('./validator');
+const process = require("process");
+const fs = require("fs");
+const validator = require("./validator");
+const cipher = require("./cipher");
 
-program.storeOptionsAsProperties(false)
+program.storeOptionsAsProperties(false);
 program
-  .option('-s, --shift <number>', 'necessary shift')
-  .option('-a, --action <type>', 'kind of action')
-  .option('-i, --input <fileName>', 'path to file')
-  .option('-o, --output <fileName>', 'path to output file');
+  .option("-s, --shift <number>", "necessary shift")
+  .option("-a, --action <type>", "kind of action")
+  .option("-i, --input <fileName>", "path to file")
+  .option("-o, --output <fileName>", "path to output file");
 
 const programOptions = program.opts();
 program.parse(process.argv);
-// console.log(process.argv)
-// check requred param: -s, -a
+
 
 const resultOfValidation = validator(programOptions);
 
+function readInitDate(programOptions, prevMessage) {
+  let { shift, action, input, output } = { ...programOptions };
+  let createReadStreamInput;
+  let writeableStreamOutput;
 
-if(programOptions.shift) {
-  console.log(program.shift)
+
+  if (resultOfValidation.isHaveInputFile) {
+    createReadStreamInput = fs.createReadStream(`${input}`, "utf8");
+
+    createReadStreamInput.on("data", function(chunk) {
+      let codeMessage = cipher(chunk, action, shift);
+      let message = prevMessage + "\n" + codeMessage;
+      if (resultOfValidation.isHaveOutFile) {
+        writeableStreamOutput = fs.createWriteStream(`${output}`, "utf8");
+        writeableStreamOutput.write(message, "utf8");
+      } else {
+        let codeMessage = cipher(chunk, action, shift);
+        let message = prevMessage + "\n" + codeMessage;
+        process.stdout.write(message);
+        process.exit(200);
+      }
+
+    });
+  } 
 }
 
-if(programOptions.action) {
-  console.log(programOptions.action)
-}
-console.log(programOptions.input, '----program.input')
-if(programOptions.input) {
-  console.log(programOptions.input, '----program.input')
-  const fileContent = fs.readFileSync(`${programOptions.input}`, 'utf-8')
-  console.log(fileContent)
-}
-
-if(programOptions.output) {
-  const fileContent = fs.readFileSync(`${programOptions.output}`, 'utf-8')
-  console.log(fileContent)
+if (!resultOfValidation.isCorrect) {
+  process.stdout.write(resultOfValidation.errMess.join("\n"));
+  process.exit(1);
+} else {
+  if (resultOfValidation.isHaveOutFile) {
+    readPrevData(programOptions.output);
+  } else {
+    readInitDate(programOptions, null);
+  }
 }
 
-
-
+function readPrevData(output) {
+  let createReadStreamOutput = fs.createReadStream(`${output}`, "utf8");
+  createReadStreamOutput.on("data", function(chunk) {
+    readInitDate(programOptions, chunk);
+  });
+}
